@@ -24,7 +24,7 @@ BugReports: https://github.com/BioinfOMICS/LipidTrend/issues
 LazyData: FALSE
 biocViews: Software, Lipidomics, StatisticalMethod, DifferentialExpression, 
     Visualization
-Depends: R (>= 4.4.0)
+Depends: R (>= 4.5.0)
 Imports: dplyr, ggplot2, magrittr, methods, rlang, SummarizedExperiment
 Suggests: BiocStyle, devtools, knitr, roxygen2, rmarkdown, testthat (>= 3.0.0), S4Vectors,
 Enhances: data.table, 
