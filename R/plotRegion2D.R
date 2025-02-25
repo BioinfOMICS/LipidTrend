@@ -138,11 +138,6 @@ setMethod(
             return(feature_region != "None")
         }
     }
-    # for (direction in names(neighbors)) {
-    #     if (needsWall(neighbors[[direction]], direction)) {
-    #         wall_positions <- c(wall_positions, direction)
-    #     }
-    # }
     need_walls <- vapply(names(neighbors), function(direction) {
         needsWall(neighbors[[direction]], direction)
     }, logical(1))
