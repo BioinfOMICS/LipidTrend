@@ -7,7 +7,7 @@ This package also includes two plotting functions for visualizing significant te
 one-dimensional and two-dimensional feature data, respectively.
 
 ## Installation 
-To install `LipidTrend`, ensure that you have R 4.4.0 or later installed 
+To install `LipidTrend`, ensure that you have R 4.5.0 or later installed 
 (see the R Project at [http://www.r-project.org](http://www.r-project.org)) 
 and are familiar with its usage.
 
