@@ -1,0 +1,49 @@
+Package: LipidTrend
+Type: Package
+Title: LipidTrend: Analysis and Visualization of Lipid Feature Tendencies
+Version: 0.99.0
+Authors@R: c(
+    person("Wei-Chung", "Cheng", email="chenglabomics@gmail.com", 
+    role = c("aut","cre","cph"), comment = c(ORCID = "0000-0002-1229-4857")),
+    person("Chia-Hsin ", "Liu", role = c("aut", "ctb")),
+    person("Pei-Chun", "Shen", role = c("aut", "ctb")),
+    person("Wen-Jen", "Lin", role = c("aut","ctb")),
+    person("Hung-Ching", "Chang", role = c("aut","ctb")),
+    person("Meng-Hsin", "Tsai", role = c("aut","ctb"))
+    )
+Description: 
+    "LipidTrend" is an R package that implements a permutation-based statistical 
+    test to identify significant differences in lipidomic features between 
+    groups. The test incorporates Gaussian kernel smoothing of region statistics 
+    to improve stability and accuracy, particularly when dealing with small 
+    sample sizes. This package also includes two plotting functions for 
+    visualizing significant tendencies in 1D and 2D feature data, respectively.
+License: MIT + file LICENSE
+URL: https://github.com/BioinfOMICS/LipidTrend
+BugReports: https://github.com/BioinfOMICS/LipidTrend/issues
+LazyData: FALSE
+biocViews: Software, Lipidomics, StatisticalMethod, DifferentialExpression, 
+    Visualization
+Depends: R (>= 4.4.0)
+Imports: dplyr, ggplot2, magrittr, methods, rlang, SummarizedExperiment
+Suggests: BiocStyle, devtools, knitr, roxygen2, rmarkdown, testthat (>= 3.0.0), S4Vectors,
+Enhances: data.table, 
+VignetteBuilder: knitr
+Config/Needs/website: usethis, servr
+Config/potools/style: explicit
+Config/testthat/edition: 3
+Config/testthat/parallel: true
+Config/build/clean-inst-doc: FALSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Collate: 
+    'allClasses.R'
+    'allGenerics.R'
+    'analyzeLipidRegion.R'
+    'data.R'
+    'globals.R'
+    'LipidTrend.R'
+    'plotRegion1D.R'
+    'plotRegion2D.R'
+    'utils.R'

@@ -1,0 +1,369 @@
+---
+title: "Analyzing Lipid Feature Tendencies with LipidTrend"
+package: LipidTrend
+output:
+  BiocStyle::html_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+date: "`r Sys.Date()`"
+vignette: >
+  %\VignetteIndexEntry{LipidTrend}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r style, echo=FALSE, results='asis'}
+BiocStyle::markdown(css.files = c('custom.css'))
+knitr::opts_chunk$set(collapse=TRUE, comment="#>")
+```
+
+# Introduction
+`LipidTrend` is an R package designed to identify significant differences in 
+lipidomic feature tendencies between groups. The package includes 3 main 
+functions:
+
+1. **analyzeLipidRegion** – Performs statistical analysis to examine lipid 
+feature tendencies.
+2. **plotRegion1D** – Visualizes results for one-dimensional lipid features.
+3. **plotRegion2D** – Visualizes results for two-dimensional lipid features.
+    
+Additionally, several helper functions are available to facilitate the viewing 
+of result data in the return object. For more details, please refer to 
+[helper function section](#helper).
+
+# Installation 
+To install `LipidTrend`, ensure that you have R 4.5.0 or later installed 
+(see the R Project at [http://www.r-project.org](http://www.r-project.org)) 
+and are familiar with its usage.
+
+`LipidTrend` package is available on Bioconductor repository
+[http://www.bioconductor.org](http://www.bioconductor.org). 
+Before installing `LipidTrend`, you must first install the core Bioconductor 
+packages. If you have already installed them, you can skip the following step.
+```{r install_Bioconductor, eval=FALSE}
+if (!requireNamespace("BiocManager", quietly=TRUE))
+    install.packages("BiocManager")
+BiocManager::install()
+```
+
+Once the core Bioconductor packages are installed, you can proceed with 
+installing `LipidTrend`.
+```{r install_package, eval=FALSE}
+if (!requireNamespace("BiocManager", quietly=TRUE))
+    install.packages("BiocManager")
+BiocManager::install("LipidTrend")
+``` 
+
+After the installation is complete, you’re ready to start using `LipidTrend`.
+Now, let’s load the package first.
+```{r load, message=FALSE}
+library(LipidTrend)
+```
+
+# Data preparation
+`LipidTrend` requires a SummarizedExperiment object as input data. It must 
+contain the following components:
+
+1. **Assay**: A matrix containing lipid abundance data, where rows represent 
+lipids and columns represent samples.
+
+2. **RowData**: A data frame of lipid features (e.g., double bond count, chain 
+length), where rows are lipids and columns are lipid features (limited to 
+1 or 2 columns). The order of lipids must match the abundance data.
+    * If RowData contains one column, a one-dimensional analysis will be 
+    performed.
+    * If RowData includes two columns, a two-dimensional analysis will be 
+    conducted.
+    
+3. **ColData**: A data frame containing group information, where rows represent 
+sample names and columns must include sample name, label name, and group, 
+arranged accordingly.
+
+If you are already familiar with constructing a SummarizedExperiment object, 
+you can skip the following section. Otherwise, refer to the example in the rest 
+of this section to learn how to build a SummarizedExperiment object.
+
+## Abundance data
+The abundance data is a matrix containing lipid abundance values across lipids 
+and samples, where rows represent lipids and columns represent samples.
+```{r abundance}
+rm(list = ls())
+
+# load example abundance data
+data("abundance_2D")
+
+# view abundance data
+head(abundance_2D, 5)
+```
+
+## Lipid characteristic table
+The lipid characteristic table is a data frame containing information about 
+each lipid's characteristics, such as the number of double bonds and chain 
+length. 
+The order of the lipids in this table must align with the abundance data.
+
+A one-dimensional analysis will be conducted if the table has only one column, 
+and a two-dimensional analysis will be performed if it contains two columns. 
+The table can only have a maximum of two columns.
+
+In this example, we use data suitable for a two-dimensional analysis.
+```{r char_table}
+# load example lipid characteristic table (2D)
+data("char_table_2D")
+
+# view lipid characteristic table
+head(char_table_2D, 5)
+```
+
+## Group information table
+The group information table is a data frame containing grouping details 
+corresponding to the samples in the lipid abundance data. It must adhere to the 
+following requirements:
+
+1. The columns must be arranged in the following order: `sample_name`, 
+`label_name`, and `group`.
+2. All sample names must be unique.
+3. The sample names in the `sample_name` column must match those in the lipid 
+abundance data.
+4. The columns `sample_name`, `label_name`, and `group` must not contain NA 
+values.
+
+For example:
+```{r groupInfo}
+# load example group information table
+data("group_info")
+
+# view group information table
+group_info
+```
+
+## Constructing SummarizedExperiment object
+Once the abundance data, lipid characteristic table, and group information 
+table are prepared, we can construct the input SummarizedExperiment object. 
+We will use the `SummarizedExperiment` function from 
+`r Biocpkg("SummarizedExperiment")`. 
+
+Follow the command below to create this object.
+```{r build_se}
+se_2D <- SummarizedExperiment::SummarizedExperiment(
+    assays=list(abundance=abundance_2D),
+    rowData=S4Vectors::DataFrame(char_table_2D),
+    colData=S4Vectors::DataFrame(group_info))
+```
+
+# Initiate `LipidTrend` workflow
+The workflow of `LipidTrend` is primarily divided into one-dimensional and 
+two-dimensional lipid feature analyses. The process begins with a 
+SummarizedExperiment object as input data and, after computation and plotting, 
+respectively, returns a statistical results data frame and plot.
+
+We recommend using the `set.seed()` function before starting to ensure 
+stability in the permutation process during computation.
+```{r }
+set.seed(1234)
+```
+
+## One-dimensional analysis {#lipid1d}
+The one-dimensional analysis is applicable when the input data contains only a 
+single lipid characteristic. Let’s briefly view the structure of the example 
+input data.
+```{r LipidTrend_1D}
+# load example data
+data("lipid_se_CL")
+
+# quick look of SE structure
+show(lipid_se_CL)
+```
+
+### Analyze lipid region
+This section calculate p-value of lipidomic features by permutation test.
+The test of region statistics smoothing with Gaussian kernel integrates
+neighbor's information and provides a stable testing result under small
+sample size.
+
+You can obtain separate results for even-chain and odd-chain lipids by 
+adequately configuring the variables `split_chain` and `chain_col.` 
+
+If `split_chain` is set to `TRUE`, the results will be divided into even-chain 
+and odd-chain lipids. By default, `split_chain` is set to `FALSE`; however, we 
+recommend setting it to TRUE for more meaningful biological insights.
+
+**Note:**  
+- When `split_chain=TRUE`, you must specify the column name for chain 
+length in the `chain_col` variable.  
+- If `split_chain=FALSE`, then `chain_col` should be NULL.
+
+```{r countRegion1D}
+# run analyzeLipidRegion
+res1D <- analyzeLipidRegion(
+    lipid_se_CL, ref_group="sgCtrl", split_chain=TRUE,
+    chain_col="chain", radius=3, own_contri=0.5, permute_time=1000)
+
+# view result summary 
+show(res1D)
+```
+
+The `analyzeLipidRegion` function produces an extended SummarizedExperiment 
+object called `LipidTrendSE`. To facilitate result extraction, we offer several 
+helper functions that make viewing the resulting data frame easier. For more 
+information on these helper functions, please refer to 
+[helper function section](#helper).
+
+```{r Region1D_result}
+# view even chain result (first 5 lines)
+head(getEvenChainResult(res1D), 5)
+
+# view odd chain result (first 5 lines)
+head(getOddChainResult(res1D), 5)
+```
+
+### Result visualization
+This section utilizes the `LipidTrendSE` output from the `analyzeLipidRegion` 
+function to visualize the results. 
+
+**Note**: 
+- If `split_chain` is set to TRUE, two plots will be generated: one for 
+even-chain lipids and another for odd-chain lipids. 
+- If `split_chain` is set to FALSE, only a single plot will be returned.
+
+```{r plotRegion1D}
+# plot result
+plots <- plotRegion1D(res1D, p_cutoff=0.05)
+
+# even chain result
+plots$even_result
+
+# odd chain result
+plots$odd_result
+```
+
+The visualization illustrates lipid trends and includes the following 
+components:
+
+1. **Blue/Red Ribbons** – Highlight significant regions of difference between 
+groups.
+2. **Points** – Display average abundance of each lipid across all samples.
+
+**Color Interpretation**:
+
+* Red areas indicate higher abundance in case samples.
+* Blue areas indicate higher abundance in control samples.
+
+## Two-dimensional analysis {#lipid2d}
+The main difference between one-dimensional and two-dimensional analysis lies 
+in the provided lipid characteristics table. One-dimensional analysis focuses 
+on a single lipid feature, whereas two-dimensional analysis examines two lipid 
+features simultaneously. The two-dimensional approach is applicable when the 
+input data includes two lipid characteristics.
+
+Now, let’s take a quick look at the structure of the example input data.
+```{r LipidTrend_2D}
+# load example data
+data("lipid_se_2D")
+
+# quick look of SE structure
+show(lipid_se_2D)
+```
+
+### Analyze lipid region
+This section calculate p-value of lipidomic features by permutation test.
+The test of region statistics smoothing with Gaussian kernel integrates
+neighbor's information and provides a stable testing result under small
+sample size.
+
+You can obtain separate results for even-chain and odd-chain lipids by 
+adequately configuring the variables `split_chain` and `chain_col.` 
+
+If `split_chain` is set to `TRUE`, the results will be divided into even-chain 
+and odd-chain lipids. By default, `split_chain` is set to `FALSE`; however, we 
+recommend setting it to TRUE for more meaningful biological insights.
+
+**Note:**  
+- When `split_chain=TRUE`, you must specify the column name for chain 
+length in the `chain_col` variable.  
+- If `split_chain=FALSE`, then `chain_col` should be NULL.
+
+```{r countRegion2D}
+# run analyzeLipidRegion
+res2D <- analyzeLipidRegion(
+    lipid_se_2D, ref_group="sgCtrl", split_chain=TRUE,
+    chain_col="Total.C", radius=3, own_contri=0.5, permute_time=1000,
+    abun_weight=TRUE)
+
+# view result summary 
+show(res2D)
+```
+
+The `analyzeLipidRegion` function produces an extended SummarizedExperiment 
+object called `LipidTrendSE`. To facilitate result extraction, we offer several 
+helper functions that make viewing the resulting data frame easier. For more 
+information on these helper functions, please refer to 
+[helper function section](#helper).
+
+```{r Region2D_result}
+# view even chain result (first 5 lines)
+head(getEvenChainResult(res2D), 5)
+
+# view odd chain result (first 5 lines)
+head(getOddChainResult(res2D), 5)
+```
+
+### Result visualization
+This section utilizes the `LipidTrendSE` output from the `analyzeLipidRegion` 
+function to visualize the results. 
+
+**Note**: 
+- If `split_chain` is set to TRUE, two plots will be generated: one for 
+even-chain lipids and another for odd-chain lipids. 
+- If `split_chain` is set to FALSE, only a single plot will be returned.
+
+```{r LipidTrend_2D_plot}
+# plot result
+plot2D <- plotRegion2D(res2D, p_cutoff=0.05)
+
+# even chain result
+plot2D$even_result
+
+# odd chain result
+plot2D$odd_result
+```
+
+This plot visualizes two-dimensional lipid features, highlighting trends and 
+significant differences between case and control groups. 
+
+The X-axis represents the total carbon chain length, while the Y-axis shows the 
+total double bond count. The color scale indicates the log2 fold-change (FC) 
+between the case and control groups: red regions indicate higher abundance in 
+case samples, whereas blue regions indicate higher abundance in control 
+samples. 
+
+Circle size represents the average abundance level, with larger 
+circles indicating higher abundance. Red and blue outlines highlight regions 
+with significant differences between the case and control groups. Asterisks 
+(\*, \*\*, ***) signify levels of statistical significance, with more asterisks 
+representing greater significance.
+
+Through this visualization, you can identify lipidomic patterns and differences 
+across various lipid characteristics.
+
+# Helper Functions – enhancing result viewing {#helper}
+`LipidTrend` provides 4 helper functions to enhance the viewing of the 
+`LipidTrendSE` object returned by `analyzeLipidRegion`:
+
+1. getResult – Returns the result data frame.
+2. getEvenChainResult – Returns the even-chain result data frame.
+3. getOddChainResult – Returns the odd-chain result data frame.
+4. show – Displays a summary of the `LipidTrendSE` object.
+
+**Notes**:
+
+* If `split_chain=TRUE`, use `getEvenChainResult` and `getOddChainResult` to 
+view the results separately. Otherwise, use `getResult`.
+* To extract assay, rowData, or colData from the `LipidTrendSE` object, use 
+functions from the `r Biocpkg("SummarizedExperiment")` package.
+
+# Session info
+```{r sessionInfo, echo=FALSE}
+sessionInfo()
+```
