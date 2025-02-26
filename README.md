@@ -15,7 +15,7 @@ and are familiar with its usage.
 [http://www.bioconductor.org](http://www.bioconductor.org). 
 Before installing `LipidTrend`, you must first install the core Bioconductor 
 packages. If you have already installed them, you can skip this step.
-```{r install_Bioconductor, eval=FALSE}
+```R
 if (!requireNamespace("BiocManager", quietly=TRUE))
     install.packages("BiocManager")
 BiocManager::install()
@@ -23,7 +23,7 @@ BiocManager::install()
 
 Once the core Bioconductor packages are installed, you can proceed with 
 installing `LipidTrend`.
-```{r install_package, eval=FALSE}
+```R
 if (!requireNamespace("BiocManager", quietly=TRUE))
     install.packages("BiocManager")
 BiocManager::install("LipidTrend")
