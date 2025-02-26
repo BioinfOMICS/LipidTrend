@@ -1,4 +1,4 @@
-#' Example Dataset for 1 dimension data
+#' Example Dataset for one-dimensional data
 #'
 #' @docType data
 #' @usage data(lipid_se_CL)
@@ -15,7 +15,7 @@
 #' data(lipid_se_CL)
 "lipid_se_CL"
 
-#' Example Dataset for 2 dimension data
+#' Example Dataset for two-dimensional data
 #'
 #' @docType data
 #' @usage data(lipid_se_2D)
@@ -33,7 +33,7 @@
 #' data(lipid_se_2D)
 "lipid_se_2D"
 
-#' Example lipid abundance data for 1 dimension LipidTrend analysis
+#' Example lipid abundance data for one-dimensional LipidTrend analysis
 #'
 #' @docType data
 #' @usage data(abundance_CL)
@@ -47,7 +47,7 @@
 #' data(abundance_CL)
 "abundance_CL"
 
-#' Example lipid abundance data for 2 dimension LipidTrend analysis
+#' Example lipid abundance data for two-dimensional LipidTrend analysis
 #'
 #' @docType data
 #' @usage data(abundance_2D)
@@ -61,7 +61,7 @@
 #' data(abundance_2D)
 "abundance_2D"
 
-#' Example lipid characteristics table for 1 dimension LipidTrend analysis
+#' Example lipid characteristics table for one-dimensional LipidTrend analysis
 #'
 #' @docType data
 #' @usage data(char_table_CL)
@@ -75,7 +75,7 @@
 #' data(char_table_CL)
 "char_table_CL"
 
-#' Example lipid characteristics table for 2 dimension LipidTrend analysis
+#' Example lipid characteristics table for two-dimensional LipidTrend analysis
 #'
 #' @docType data
 #' @usage data(char_table_2D)

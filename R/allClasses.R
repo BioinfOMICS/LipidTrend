@@ -4,7 +4,7 @@ setClassUnion("data.frameOrNULL", c("data.frame", "NULL"))
 #' @description This class extends SummarizedExperiment to store
 #' analyzeLipidRegion analysis results
 #' @slot split_chain Logical indicating whether chains were split by parity.
-#'   When TRUE, results are stored in even_chain_results and odd_chain_results.
+#'   When TRUE, results are stored in even_chain_result and odd_chain_result.
 #'   When FALSE, results are stored in the result slot.
 #' @slot result Data frame of analysis results (for non-split data)
 #' @slot even_chain_result Data frame of results for even chains (when split)
@@ -23,7 +23,7 @@ setClass(
         even_chain_result=NULL, odd_chain_result=NULL)
 )
 
-#' @title Validate LipidTrendSE objects
+#' @title Validate LipidTrendSE object
 #' @name LipidTrendSE-validity
 #' @param object A LipidTrendSE object to validate
 #' @return TRUE if valid, otherwise an error message
