@@ -48,7 +48,7 @@ test_that("plotRegion2D creates valid plot", {
     expect_no_error(plot <- plotRegion2D(result, p_cutoff=0.05))
     expect_true(inherits(plot, "ggplot"))
     # high regions
-    result_df <- getResult(result)
+    result_df <- result(result)
     result_df$direction <- "+"
     result_df$smoothing.pval.BH <- 0.01
     result_df$log2.FC <- 2
@@ -81,7 +81,7 @@ test_that("plotRegion2D handles split chain analysis correctly", {
     expect_true(inherits(plot$even_result, "ggplot"))
     expect_true(inherits(plot$odd_result, "ggplot"))
     # one chain type has no significant regions
-    even_results <- getEvenChainResult(result)
+    even_results <- even_chain_result(result)
     even_results$smoothing.pval.BH <- 1
     attr(result, "even_chain_results") <- even_results
     expect_no_error(plot_partial <- plotRegion2D(result, p_cutoff=0.05))
@@ -99,7 +99,7 @@ test_that("plotRegion2D handles wall building correctly", {
     result <- analyzeLipidRegion(
         lipid_se=se, ref_group="control", split_chain=FALSE, radius=3,
         own_contri=0.5, permute_time=100)
-    result_df <- getResult(result)
+    result_df <- result(result)
     result_df$direction <- rep(c("+", "-"), length.out=nrow(result_df))
     result_df$smoothing.pval.BH <- 0.01
     result_df$log2.FC <- ifelse(result_df$direction == "+", 2, -2)
@@ -160,7 +160,7 @@ test_that("plotRegion2D handles invalid inputs and edge cases", {
     attr(bad_result, "split_chain") <- "invalid"
     expect_error(plotRegion2D(bad_result, p_cutoff=0.05))
     # missing required columns
-    result_df <- getResult(result)
+    result_df <- result(result)
     result_df$Total.C <- NULL
     attr(result, "result") <- result_df
     expect_error(plotRegion2D(result, p_cutoff=0.05))
@@ -225,7 +225,7 @@ test_that(".pvalAnnotation handles edge cases", {
     expect_equal(.pvalAnnotation(0.001), "**")
     expect_equal(.pvalAnnotation(0.009), "**")
     expect_equal(.pvalAnnotation(0.04), "*")
-    expect_equal(.pvalAnnotation(0.09), ".")
+    expect_equal(.pvalAnnotation(0.09), "-")
     expect_equal(.pvalAnnotation(0.5), "")
 })
 
@@ -244,7 +244,7 @@ test_that(".plotHeatmap validates input and creates plot", {
         pval.annotate=rep("*", 9))
     expect_error(
         .plotHeatmap(X.info, heatmap.df, NULL, "1", 1),
-        "Distance parameters must be numeric"
+        "Required columns missing from heatmap.df"
     )
 })
 
