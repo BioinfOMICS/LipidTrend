@@ -4,13 +4,17 @@
 \alias{.trendPlot1D}
 \title{Create 1D result plot}
 \usage{
-.trendPlot1D(res, p_cutoff)
+.trendPlot1D(res, p_cutoff, y_scale)
 }
 \arguments{
 \item{res}{A data.frame containing columns for coordinates, abundance values,
 direction, and adjusted p-values}
 
-\item{p_cutoff}{Numeric value for significance cutoff (default=0.05)}
+\item{p_cutoff}{Numeric value for significance cutoff.
+Default is \code{0.05}}
+
+\item{y_scale}{Character. Choose one of the y-axis scales: "identity",
+"log2", "log10", or "sqrt". Default is \code{"identity"}}
 }
 \value{
 A ggplot2 object
