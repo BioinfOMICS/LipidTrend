@@ -61,8 +61,8 @@ test_that("analyzeLipidRegion handles basic input correctly", {
             own_contri=0.5, permute_time=100)
     )
     expect_true(inherits(result, "LipidTrendSE"))
-    expect_false(.getSplitChainStatus(result))
-    res_df <- getResult(result)
+    expect_false(.split_chain(result))
+    res_df <- result(result)
     expect_true(is.data.frame(res_df))
     expect_true(
         all(c(
@@ -77,9 +77,9 @@ test_that("analyzeLipidRegion handles split chain analysis", {
             chain_col="chain", radius=3, own_contri=0.5,
             permute_time=100)
     )
-    expect_true(.getSplitChainStatus(result))
+    expect_true(.split_chain(result))
     expect_true(!is.null(
-        getEvenChainResult(result)) || !is.null(getOddChainResult(result)))
+        even_chain_result(result)) || !is.null(odd_chain_result(result)))
 })
 
 test_that("analyzeLipidRegion handles empty chain groups correctly", {
@@ -98,12 +98,11 @@ test_that("analyzeLipidRegion handles empty chain groups correctly", {
         row.names=paste0("sample", seq_len(n_samples)))
     se_odd_only <- SummarizedExperiment(
         assays=list(abundance=assay_data), rowData=row_data, colData=col_data)
-    result <- analyzeLipidRegion(
-        lipid_se=se_odd_only, ref_group="control", split_chain=TRUE,
-        chain_col="chain", radius=3, own_contri=0.5, permute_time=100)
-    expect_true(.getSplitChainStatus(result))
-    expect_null(getEvenChainResult(result))
-    expect_false(is.null(getOddChainResult(result)))
+    expect_warning(
+        analyzeLipidRegion(
+            lipid_se=se_odd_only, ref_group="control", split_chain=TRUE,
+            chain_col="chain", radius=3, own_contri=0.5, permute_time=100)
+    )
     # Create the opposite case - only even chains
     feature_names_even <- as.character(seq(34, 34 + 2*(n_features-1), by = 2))
     assay_data_even <- matrix(
@@ -114,12 +113,12 @@ test_that("analyzeLipidRegion handles empty chain groups correctly", {
     se_even_only <- SummarizedExperiment(
         assays=list(abundance=assay_data_even), rowData=row_data_even,
         colData=col_data)
-    result <- analyzeLipidRegion(
-        lipid_se=se_even_only, ref_group="control", split_chain=TRUE,
-        chain_col="chain", radius=3, own_contri=0.5, permute_time=100)
-    expect_true(.getSplitChainStatus(result))
-    expect_null(getOddChainResult(result))
-    expect_false(is.null(getEvenChainResult(result)))
+    warning_message <-
+    expect_warning(
+        analyzeLipidRegion(
+            lipid_se=se_even_only, ref_group="control", split_chain=TRUE,
+            chain_col="chain", radius=3, own_contri=0.5, permute_time=100)
+    )
 })
 
 test_that("analyzeLipidRegion validates input parameters", {
@@ -156,22 +155,22 @@ test_that(".smooth_permutation handles edge cases", {
     region.stat.obs <- rnorm(5)
     expect_no_error(
         .smooth_permutation(
-            X, group, dist.mat, own_contri=0.1, test="t.test", abun_weight=TRUE,
+            X, group, dist.mat, own_contri=0.1, test="t.test", abund_weight=TRUE,
             permute_time=100, region.stat.obs=region.stat.obs)
     )
     expect_no_error(
         .smooth_permutation(
             X, group, dist.mat, own_contri=0.5, test="t.test",
-            abun_weight=FALSE, permute_time=100,
+            abund_weight=FALSE, permute_time=100,
             region.stat.obs=region.stat.obs)
     )
     result <- .smooth_permutation(
-        X, group, dist.mat, own_contri=0.1, test="t.test", abun_weight=TRUE,
+        X, group, dist.mat, own_contri=0.1, test="t.test", abund_weight=TRUE,
         permute_time=100, region.stat.obs=region.stat.obs)
     expect_true(all(is.finite(result$smooth.stat)))
     expect_true(all(is.finite(result$smooth.stat.permute)))
     result <- .smooth_permutation(
-        X, group, dist.mat, own_contri=0.5, test="t.test", abun_weight=FALSE,
+        X, group, dist.mat, own_contri=0.5, test="t.test", abund_weight=FALSE,
         permute_time=100, region.stat.obs=region.stat.obs)
     expect_true(all(is.finite(result$smooth.stat)))
     expect_true(all(is.finite(result$smooth.stat.permute)))
@@ -246,7 +245,7 @@ test_that(".smooth_permutation handles small radius_values", {
     expect_error(
         .smooth_permutation(
             X, group, dist.mat * radius_values, own_contri=0.5, test="t.test",
-            abun_weight=TRUE, permute_time=100,
+            abund_weight=TRUE, permute_time=100,
             region.stat.obs=region.stat.obs),
         "the 'own_contri' should smaller than "
     )

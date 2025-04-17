@@ -33,7 +33,7 @@ data("lipid_se_2D")
 res_se <- analyzeLipidRegion(
     lipid_se=lipid_se_2D, ref_group="sgCtrl", split_chain=FALSE,
     chain_col=NULL, radius=3, own_contri=0.5, permute_time=100,
-    abun_weight=TRUE)
+    abund_weight=TRUE)
 plot_2D <- plotRegion2D(res_se, p_cutoff=0.05)
 }
 \seealso{

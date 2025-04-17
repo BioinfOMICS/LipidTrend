@@ -37,29 +37,33 @@ test_that("plotRegion1D creates valid plot", {
     result <- analyzeLipidRegion(
         lipid_se=se, ref_group="control", split_chain=FALSE, chain_col=NULL,
         radius=3,own_contri=0.5, permute_time=100)
-    expect_no_error(plot <- plotRegion1D(result, p_cutoff=0.05))
+    expect_no_error(plot <- plotRegion1D(
+        result, p_cutoff=0.05, y_scale='identity'))
     expect_true(inherits(plot, "ggplot"))
     # positive regions
-    result_df <- getResult(result)
+    result_df <- result(result)
     result_df$direction <- "+"
     result_df$smoothing.pval.BH <- 0.01
     result_df$avg.expr.ctrl <- 1
     result_df$avg.expr.case <- 2
     attr(result, "result") <- result_df
-    expect_no_error(plot_pos <- plotRegion1D(result, p_cutoff=0.05))
+    expect_no_error(plot_pos <- plotRegion1D(
+        result, p_cutoff=0.05, y_scale='identity'))
     expect_true(inherits(plot_pos, "ggplot"))
     # negative regions
     result_df$direction <- "-"
     result_df$avg.expr.ctrl <- 2
     result_df$avg.expr.case <- 1
     attr(result, "result") <- result_df
-    expect_no_error(plot_neg <- plotRegion1D(result, p_cutoff=0.05))
+    expect_no_error(plot_neg <- plotRegion1D(
+        result, p_cutoff=0.05, y_scale='identity'))
     expect_true(inherits(plot_neg, "ggplot"))
     # mixed positive and negative regions
     result_df$direction <- rep(c("+", "-"), length.out=nrow(result_df))
     result_df$smoothing.pval.BH <- rep(c(0.01, 0.1), length.out=nrow(result_df))
     attr(result, "result") <- result_df
-    expect_no_error(plot_mixed <- plotRegion1D(result, p_cutoff=0.05))
+    expect_no_error(plot_mixed <- plotRegion1D(
+        result, p_cutoff=0.05, y_scale='identity'))
     expect_true(inherits(plot_mixed, "ggplot"))
 })
 
@@ -70,14 +74,16 @@ test_that("plotRegion1D handles split chain analysis correctly", {
         lipid_se=se_split, ref_group="control", split_chain=TRUE,
         chain_col="chain", radius=3, own_contri=0.5, permute_time=100)
     # both even and odd chain
-    expect_no_error(plot <- plotRegion1D(result, p_cutoff=0.05))
+    expect_no_error(plot <- plotRegion1D(
+        result, p_cutoff=0.05, y_scale='identity'))
     expect_true(inherits(plot$even_result, "ggplot"))
     expect_true(inherits(plot$odd_result, "ggplot"))
     # one chain type has no significant regions
-    even_results <- getEvenChainResult(result)
+    even_results <- even_chain_result(result)
     even_results$smoothing.pval.BH <- 1
     attr(result, "even_chain_results") <- even_results
-    expect_no_error(plot_one_sig <- plotRegion1D(result, p_cutoff=0.05))
+    expect_no_error(plot_one_sig <- plotRegion1D(
+        result, p_cutoff=0.05, y_scale='identity'))
 })
 
 test_that("plotRegion1D handles invalid input and edge cases", {
@@ -87,27 +93,29 @@ test_that("plotRegion1D handles invalid input and edge cases", {
         radius=3, own_contri=0.5, permute_time=100)
     # invalid p_cutoff values
     expect_error(
-        plotRegion1D(result, p_cutoff=-1),
+        plotRegion1D(result, p_cutoff=-1, y_scale='identity'),
         "p_cutoff must be a numeric value between 0 and 1"
     )
     expect_error(
-        plotRegion1D(result, p_cutoff=2),
+        plotRegion1D(result, p_cutoff=2, y_scale='identity'),
         "p_cutoff must be a numeric value between 0 and 1"
     )
     # no significant regions
-    result_df <- getResult(result)
+    result_df <- result(result)
     result_df$smoothing.pval.BH <- 1
     attr(result, "result") <- result_df
-    expect_no_error(plot_no_sig <- plotRegion1D(result, p_cutoff=0.05))
+    expect_no_error(plot_no_sig <- plotRegion1D(
+        result, p_cutoff=0.05, y_scale='identity'))
     expect_true(inherits(plot_no_sig, "ggplot"))
     # missing results
     bad_result <- result
     attr(bad_result, "result") <- NULL
-    expect_error(plotRegion1D(bad_result, p_cutoff=0.05))
+    expect_error(plotRegion1D(bad_result, p_cutoff=0.05, y_scale='identity'))
     # invalid split chain status
     bad_split_result <- result
     attr(bad_split_result, "split_chain") <- "invalid"
-    expect_error(plotRegion1D(bad_split_result, p_cutoff=0.05))
+    expect_error(plotRegion1D(
+        bad_split_result, p_cutoff=0.05, y_scale='identity'))
 })
 
 test_that("plotRegion1D handles various p-value cutoffs", {
@@ -116,7 +124,24 @@ test_that("plotRegion1D handles various p-value cutoffs", {
         lipid_se=se, ref_group="control", split_chain=FALSE, permute_time=100)
     p_cutoffs <- c(0.01, 0.05, 0.1)
     for(p_cut in p_cutoffs) {
-        expect_no_error(plot <- plotRegion1D(result, p_cutoff=p_cut))
+        expect_no_error(plot <- plotRegion1D(
+            result, p_cutoff=p_cut, y_scale='identity'))
         expect_true(inherits(plot, "ggplot"))
     }
+})
+
+test_that("plotRegion1D handles various y_scale", {
+    se <- create_mock_se()
+    result <- analyzeLipidRegion(
+        lipid_se=se, ref_group="control", split_chain=FALSE, permute_time=100)
+    y_scales <- c('identity', 'log2', 'log10', 'sqrt')
+    for(y_scale in y_scales) {
+        expect_no_error(plot <- plotRegion1D(
+            result, p_cutoff=0.05, y_scale=y_scale))
+        expect_true(inherits(plot, "ggplot"))
+    }
+    expect_error(
+        plotRegion1D(result, p_cutoff=0.05, y_scale=NULL),
+        "y_scale must be one of identity, log2, log10, or sqrt"
+    )
 })

@@ -28,14 +28,16 @@
 #' @param own_contri Numeric. Proportion of own contribution.
 #' Default is \code{0.5}. To not over-emphasize the neighbor information,
 #' we suggest to choose a value from 0.5 to 1.
-#' @param test string. Choose statistic test from "t.test" and "Wilcoxon".
+#' @param test String. Choose statistic test from "t.test" and "Wilcoxon".
 #' Default is \code{'t.test'}.
-#' @param abun_weight Logical. Consider the average abundance as the weight in
+#' @param abund_weight Logical. Consider the average abundance as the weight in
 #' the test statistic. Default is \code{TRUE}.
 #' @param permute_time Integer. Permutation times. Default is \code{100000}.
 #' @importFrom magrittr %>%
 #' @importFrom magrittr %<>%
 #' @importFrom SummarizedExperiment assay rowData colData
+#' @importFrom stats pt p.adjust
+#' @importFrom dplyr mutate
 #' @return A LipidTrendSE object containing lipidomic feature testing result.
 #' @examples
 #' data("lipid_se_CL")
@@ -48,7 +50,7 @@
 #' \code{\link{plotRegion2D}} for two-dimensional visualization
 analyzeLipidRegion <- function(
         lipid_se, ref_group, split_chain=FALSE, chain_col=NULL, radius=3,
-        own_contri=0.5, test="t.test", abun_weight=TRUE, permute_time=100000){
+        own_contri=0.5, test="t.test", abund_weight=TRUE, permute_time=100000){
     if (isFALSE(inherits(lipid_se, "SummarizedExperiment")) ) {
         stop("Invalid lipid_se input.")
     }
@@ -69,16 +71,9 @@ analyzeLipidRegion <- function(
     group <- group_info$lipidTrend_group
     if (isTRUE(split_chain)) {
         if (!is.null(chain_col) && chain_col %in% colnames(X.info)) {
-            chain_parity <- X.info[[chain_col]] %% 2
-            chain_groups <- list(even=chain_parity == 0, odd=chain_parity == 1)
-            output.df <- lapply(names(chain_groups), function(chain_type) {
-                sub_feature <- chain_groups[[chain_type]]
-                if (sum(sub_feature) == 0) { return(NULL) }
-                .stat_lipidTrend(
-                    X=X[, sub_feature], X.info=subset(X.info, sub_feature),
-                    group, radius, own_contri, test, permute_time, abun_weight)
-            })
-            names(output.df) <- names(chain_groups)
+            output.df <- .analyzeSplitChain(
+                X, X.info, group, chain_col, radius, own_contri, test,
+                permute_time, abund_weight)
             return(new(
                 "LipidTrendSE", lipid_se, split_chain=TRUE,
                 even_chain_result=output.df$even,
@@ -89,12 +84,48 @@ analyzeLipidRegion <- function(
     } else if (isFALSE(split_chain)) {
         output.df <- .stat_lipidTrend(
             X, X.info, group, radius, own_contri, test, permute_time,
-            abun_weight)
+            abund_weight)
         return(new(
             "LipidTrendSE", lipid_se, split_chain=FALSE, result=output.df))
     } else {
         stop("split_chain must be logical value.")
     }
+}
+
+#' @title Process Split Chain Analysis
+#' @description Helper function to analyze even and odd chain lipids separately
+#' @param X Matrix. Lipid abundance data matrix.
+#' @param X.info Data frame. Lipid feature information.
+#' @param group Vector. Group assignments.
+#' @param chain_col Column name for chain length
+#' @param radius Numeric. Distance of neighbor to include.
+#' @param own_contri Numeric. Proportion of own contribution.
+#' @param test Character. Statistical test to use.
+#' @param permute_time Integer. Number of permutations.
+#' @param abund_weight Logical. Whether to use abundance weighting.
+#' @return A data frame with split chain results
+#' @keywords internal
+.analyzeSplitChain <- function(
+        X, X.info, group, chain_col, radius, own_contri, test,
+        permute_time, abund_weight) {
+    chain_parity <- X.info[[chain_col]] %% 2
+    chain_groups <- list(even=chain_parity == 0, odd=chain_parity == 1)
+    output.df <- lapply(names(chain_groups), function(chain_type) {
+        sub_feature <- chain_groups[[chain_type]]
+        if (sum(sub_feature) < 2) {
+            warning(
+                sprintf(
+                    "Fail to proceed with the %s-chain analysis. ", chain_type),
+                sprintf("Detect less than two %s-chain lipids.", chain_type)
+            )
+            return (NULL)
+        }
+        .stat_lipidTrend(
+            X=X[, sub_feature], X.info=subset(X.info, sub_feature),
+            group, radius, own_contri, test, permute_time, abund_weight)
+    })
+    names(output.df) <- names(chain_groups)
+    return(output.df)
 }
 
 #' @title Region Statistics Calculation
@@ -141,11 +172,11 @@ analyzeLipidRegion <- function(
 #' @param own_contri Numeric. Proportion of own contribution.
 #' @param test Character. Statistical test to use.
 #' @param permute_time Integer. Number of permutations.
-#' @param abun_weight Logical. Whether to use abundance weighting.
+#' @param abund_weight Logical. Whether to use abundance weighting.
 #' @return Data frame containing analysis results.
 #' @keywords internal
 .stat_lipidTrend <- function(
-        X, X.info, group, radius, own_contri, test, permute_time, abun_weight){
+        X, X.info, group, radius, own_contri, test, permute_time, abund_weight){
     region.stat.obs <- .regionStat(X=X, Y=as.matrix(group), test=test)
     dis_res <- .countDistance(X.info)
     dist_input <- dis_res$normalized_matrix
@@ -155,13 +186,20 @@ analyzeLipidRegion <- function(
     dist.mat <- as.matrix(dist(dist_input, method = "euclidean"))
     dist.mat[dist.mat>=radius] <- Inf
     stat_res <- .smooth_permutation(
-        X, group, dist.mat, own_contri, test, abun_weight, permute_time,
+        X, group, dist.mat, own_contri, test, abund_weight, permute_time,
         region.stat.obs)
     smooth.stat <- stat_res$smooth.stat
     smooth.stat.permute <- stat_res$smooth.stat.permute
     output.df <- .resultSummary(
         X, X.info, group, smooth.stat, smooth.stat.permute, region.stat.obs,
         dim, permute_time)
+    if(all(is.na(output.df$smoothing.pval.BH))){
+        stop(
+            "Gaussian kernel smoothing may fail due to some lipids
+            having zero ", "variance in abundance between the two groups or
+            having identical ", "sample values. Please remove those lipids and
+            re-run the function.")
+    }
     return(output.df)
 }
 
@@ -172,13 +210,13 @@ analyzeLipidRegion <- function(
 #' @param dist.mat Matrix. Distance matrix.
 #' @param own_contri Numeric. Proportion of own contribution.
 #' @param test Character. Statistical test to use.
-#' @param abun_weight Logical. Whether to use abundance weighting.
+#' @param abund_weight Logical. Whether to use abundance weighting.
 #' @param permute_time Integer. Number of permutations.
 #' @param region.stat.obs Numeric vector. Observed region statistics.
 #' @return List containing smooth statistics and permutation results.
 #' @keywords internal
 .smooth_permutation <- function(
-        X, group, dist.mat, own_contri, test, abun_weight, permute_time,
+        X, group, dist.mat, own_contri, test, abund_weight, permute_time,
         region.stat.obs) {
     dist.idx <- which.max(colSums(exp(-dist.mat^2)))
     radius.seq <- seq(0.01, 5, 0.01)
@@ -195,9 +233,9 @@ analyzeLipidRegion <- function(
     exp.dist <- exp(-dist.mat^2*kernel.radius)
     rescaled.X <- X-min(X)
     rescaled.X <- 4*rescaled.X/max(rescaled.X) + 1
-    avg.log.expr <- colMeans(rescaled.X)
-    if (abun_weight) {
-        smooth.stat <- exp.dist %*% (region.stat.obs * avg.log.expr)
+    avg.log.abund <- colMeans(rescaled.X)
+    if (abund_weight) {
+        smooth.stat <- exp.dist %*% (region.stat.obs * avg.log.abund)
     } else {
         smooth.stat <- exp.dist %*% region.stat.obs
     }
@@ -205,8 +243,8 @@ analyzeLipidRegion <- function(
         seq_len(permute_time), function(x) sample(group, replace=FALSE),
         FUN.VALUE=numeric(length(group)))
     region.stat.permute <- .regionStat(X=X, Y=Y.permute, test=test)
-    if (abun_weight) {
-        smooth.stat.permute <- exp.dist %*% (region.stat.permute * avg.log.expr)
+    if (abund_weight) {
+        smooth.stat.permute <- exp.dist %*% (region.stat.permute*avg.log.abund)
     } else {
         smooth.stat.permute <- exp.dist %*% region.stat.permute
     }
@@ -234,7 +272,8 @@ analyzeLipidRegion <- function(
         region.stat.obs, dimension, permute_time, ...){
     smooth.stat.all <- cbind(smooth.stat, smooth.stat.permute)
     smooth.stat.pval <- apply(
-        smooth.stat.all, 1, function(x) mean(abs(x[1]) < abs(x[-1])))
+        smooth.stat.all, 1, function(x)
+            mean(abs(round(x[1], digits=10)) < abs(round(x[-1], digits=10))))
     smooth.stat.pval[smooth.stat.pval == 0] <- 1/permute_time
     smooth.stat.pval.BH <- p.adjust(smooth.stat.pval, method="BH")
     direction <- ifelse(sign(smooth.stat) > 0, "+", "-")
@@ -249,13 +288,13 @@ analyzeLipidRegion <- function(
         marginal.pval.BH=marginal.pval.BH, log2.FC=log2.FC)
     if (dimension == 2) {
         result %<>%
-            dplyr::mutate(avg.expr=round(colMeans(X), 2), .before="direction")
+            dplyr::mutate(avg.abund=colMeans(X), .before="direction")
     }
     if (dimension == 1) {
         result %<>%
             dplyr::mutate(
-                avg.expr.ctrl=round(colMeans(X[group == 0,]), 2),
-                avg.expr.case=round(colMeans(X[group == 1,]), 2),
+                avg.abund.ctrl=colMeans(X[group == 0,]),
+                avg.abund.case=colMeans(X[group == 1,]),
                 .before="direction")
     }
     return(result)

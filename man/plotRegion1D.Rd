@@ -5,15 +5,18 @@
 \alias{plotRegion1D,LipidTrendSE-method}
 \title{Plot region trends for one-dimensional lipid feature}
 \usage{
-plotRegion1D(object, p_cutoff = 0.05)
+plotRegion1D(object, p_cutoff = 0.05, y_scale = "identity")
 
-\S4method{plotRegion1D}{LipidTrendSE}(object, p_cutoff = 0.05)
+\S4method{plotRegion1D}{LipidTrendSE}(object, p_cutoff = 0.05, y_scale = "identity")
 }
 \arguments{
 \item{object}{A LipidTrendSE object containing analysis results.}
 
 \item{p_cutoff}{Numeric. Significance level. The range is 0 to 1.
 Default is \code{0.05}.}
+
+\item{y_scale}{Character. Choose one of the y-axis scales: "identity",
+"log2", "log10", or "sqrt". Default is \code{"identity"}.}
 }
 \value{
 For split chain analyses, a list with two elements:
@@ -33,8 +36,8 @@ data("lipid_se_CL")
 res_se <- analyzeLipidRegion(
     lipid_se=lipid_se_CL, ref_group="sgCtrl", split_chain=FALSE,
     chain_col=NULL, radius=2, own_contri=0.5, permute_time=100,
-    abun_weight=TRUE)
-plot <- plotRegion1D(res_se, p_cutoff=0.05)
+    abund_weight=TRUE)
+plot <- plotRegion1D(res_se, p_cutoff=0.05, y_scale='identity')
 }
 \seealso{
 \code{\link{analyzeLipidRegion}} for generating the input LipidTrendSE object

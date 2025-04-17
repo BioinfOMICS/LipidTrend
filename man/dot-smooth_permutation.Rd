@@ -10,7 +10,7 @@
   dist.mat,
   own_contri,
   test,
-  abun_weight,
+  abund_weight,
   permute_time,
   region.stat.obs
 )
@@ -26,7 +26,7 @@
 
 \item{test}{Character. Statistical test to use.}
 
-\item{abun_weight}{Logical. Whether to use abundance weighting.}
+\item{abund_weight}{Logical. Whether to use abundance weighting.}
 
 \item{permute_time}{Integer. Number of permutations.}
 
