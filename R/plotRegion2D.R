@@ -15,11 +15,11 @@
 #' res_se <- analyzeLipidRegion(
 #'     lipid_se=lipid_se_2D, ref_group="sgCtrl", split_chain=FALSE,
 #'     chain_col=NULL, radius=3, own_contri=0.5, permute_time=100,
-#'     abun_weight=TRUE)
+#'     abund_weight=TRUE)
 #' plot_2D <- plotRegion2D(res_se, p_cutoff=0.05)
 #' @importFrom ggplot2 ggplot aes geom_point theme_bw scale_colour_gradient2
 #'   geom_text scale_x_continuous scale_y_continuous labs scale_size
-#'   geom_segment
+#'   geom_segment geom_tile
 #' @export
 #' @seealso
 #' \code{\link{analyzeLipidRegion}} for generating the input LipidTrendSE object
@@ -38,9 +38,9 @@ setMethod(
     if (!is.numeric(log2FC_cutoff) || log2FC_cutoff <= 0) {
         stop("log2FC_cutoff must be a positive numeric value")
     }
-    if (.getSplitChainStatus(object)) {
-        even_results <- getEvenChainResult(object)
-        odd_results <- getOddChainResult(object)
+    if (.split_chain(object)) {
+        even_results <- even_chain_result(object)
+        odd_results <- odd_chain_result(object)
         plots <- list(
             even_result=if(
                 !is.null(even_results)) .trendPlot2D(
@@ -51,7 +51,7 @@ setMethod(
         )
         return(plot2D=plots)
     } else {
-        results <- getResult(object)
+        results <- result(object)
         plot <- if(!is.null(results)) .trendPlot2D(
             results, p_cutoff, log2FC_cutoff) else NULL
         return(plot2D=plot)
@@ -73,6 +73,9 @@ setMethod(
     selected.regions <- list(
         high=ifelse(smoothing.pval<p_cutoff&direction.int>0, "High", "None"),
         low=ifelse(smoothing.pval<p_cutoff&direction.int<0, "Low", "None"))
+    region_vec <- ifelse(
+        smoothing.pval < p_cutoff & direction.int > 0, "High",
+        ifelse(smoothing.pval < p_cutoff & direction.int < 0, "Low", "None"))
     dis_res <- .countDistance(X.info)
     x.distance <- dis_res$x_distance
     y.distance <- dis_res$y_distance
@@ -88,12 +91,15 @@ setMethod(
     }
     walls <- list(high=buildAllWalls("high"),low=buildAllWalls("low"))
     heatmap.df <- data.frame(
-        v1=X.info[,1], v2=X.info[,2], avg.expr=res$avg.expr,
+        v1=X.info[,1], v2=X.info[,2], avg.abund=res$avg.abund,
         log2.FC=pmin(pmax(res$log2.FC, -log2FC_cutoff), log2FC_cutoff),
         pval.annotate=vapply(
             res$marginal.pval.BH, function(pval) .pvalAnnotation(pval),
             FUN.VALUE=character(1)),
-        signed.logp.smooth=direction.int*smoothing.pval)
+        signed.logp.smooth=direction.int*smoothing.pval) %>%
+        mutate(
+            region=region_vec,
+            label_vjust=ifelse(pval.annotate == "-", 0.3, 0.7))
     heatmap <- .plotHeatmap(X.info, heatmap.df, walls, x.distance, y.distance)
     return(heatmap)
 }
@@ -183,7 +189,7 @@ setMethod(
     if (length(pval) == 0 || is.na(pval)) return("")
     dplyr::case_when(
         pval < 0.001 ~ "***", pval < 0.01 ~ "**", pval < 0.05 ~ "*",
-        pval < 0.1 ~ ".", TRUE ~ "")
+        pval < 0.1 ~ "-", TRUE ~ "")
 }
 
 #' @title Plot Heatmap with Abundance Data and Region Walls
@@ -197,32 +203,36 @@ setMethod(
 #' @return A ggplot2 object
 #' @importFrom ggplot2 ggplot aes geom_point theme_bw scale_colour_gradient2
 #'   geom_text scale_x_continuous scale_y_continuous labs scale_size
-#'   geom_segment
+#'   geom_segment geom_tile
+#' @importFrom ggnewscale new_scale_fill
 #' @keywords internal
 .plotHeatmap <- function(X.info, heatmap.df, walls, x.distance, y.distance) {
-    if (
-        !all(
-            c("v1", "v2", "avg.expr", "log2.FC", "pval.annotate") %in% colnames(
-                heatmap.df))) {
+    if (!all(
+            c("v1", "v2", "avg.abund", "log2.FC", "pval.annotate", "region")
+            %in% colnames(heatmap.df))) {
         stop("Required columns missing from heatmap.df")
     }
     if (!is.numeric(x.distance) || !is.numeric(y.distance)) {
         stop("Distance parameters must be numeric")
     }
-    base_plot <- ggplot(heatmap.df,aes(x=v1,y=v2)) + theme_bw() +
-        geom_point(aes(size=avg.expr, color=log2.FC)) +
-        scale_colour_gradient2(
-            high="#F8766D", mid="white", low="blue", midpoint=0) +
-        geom_text(aes(label=pval.annotate), color="black", size=4) +
+    base_plot <- ggplot(heatmap.df, aes(x=v1, y=v2)) +
+        theme_bw() + geom_tile(aes(fill=region), alpha=0.1, color=NA) +
+        scale_fill_manual(
+            name="Trend", breaks=c("High", "Low"), na.value=NA,
+            values=c("High"="#FF5151", "Low"="#4169E1", "None"=NA)) +
+        theme(
+            panel.grid.minor=element_blank(),
+            panel.grid.major=element_line(color="grey95")) +
         scale_x_continuous(
             breaks=seq(min(X.info[,1]), max(X.info[,1]), x.distance)) +
         scale_y_continuous(
             breaks=seq(min(X.info[,2]), max(X.info[,2]), y.distance)) +
-        labs(x=colnames(X.info)[1], y=colnames(X.info)[2]) +
-        scale_size(range=c(2,10))
+        labs(x=colnames(X.info)[1], y=colnames(X.info)[2])
+    base_plot <- base_plot + new_scale_fill()
+    final_plot <- .formingFinalPlot(base_plot, heatmap.df)
     regions <- c("high", "low")
     directions <- c("top", "right", "bottom", "left")
-    colors <- c(high = "red", low = "blue")
+    colors <- c(high="#FF5151", low="#4169E1")
     segment_layers <- unlist(
         lapply(regions, function(region) {
             vapply(directions, function(direction) {
@@ -235,14 +245,45 @@ setMethod(
                     return(list(layer))
                 }
             }, FUN.VALUE=list(NULL))
-        }), recursive = FALSE)
-    segment_layers <- Filter(Negate(is.null), segment_layers)
+        }), recursive=FALSE)
     if (length(segment_layers) > 0) {
-        final_plot <- Reduce(`+`, segment_layers, init=base_plot)
-    } else {
-        final_plot <- base_plot
+        final_plot <- Reduce(`+`, segment_layers, init=final_plot)
     }
     return(final_plot)
+}
+
+#' @title Add Data Points and Styling to Base Plot
+#' @description Adds data points with fold change coloring, significance
+#'   annotations, and styling to a base heatmap plot.
+#' @param base_plot A ggplot object containing the initial base plot structure
+#' @param heatmap.df A data frame with columns for visualization:
+#'   \describe{
+#'     \item{avg.abund}{Numeric. Average abundance values for point sizing}
+#'     \item{log2.FC}{Numeric. Log2 fold change values for point coloring}
+#'     \item{pval.annotate}{Character. Significance symbols for annotations}
+#'     \item{label_vjust}{Numeric. Vertical adjustment for text labels}
+#'   }
+#' @return A ggplot object with enhanced visualization layers
+#' @importFrom ggplot2 geom_point scale_fill_gradient2 geom_text scale_size
+#' theme
+#' @keywords internal
+.formingFinalPlot <- function(base_plot, heatmap.df) {
+    plot <- base_plot +
+        geom_point(
+            aes(size=avg.abund, fill=log2.FC), shape=21,
+            color="grey70", stroke=0.3) +
+        scale_fill_gradient2(
+            name="Log2(FC)", high="#FF4500", mid="gray90", low="#4169E1",
+            midpoint=0) +
+        geom_text(aes(
+            label=pval.annotate, vjust=label_vjust), color="#3C3C3C",
+            size=3, hjust=0.5) +
+        scale_size(name="Abundance", range=c(3,12)) +
+        theme(
+            axis.title=element_text(size=15), axis.text=element_text(size=14),
+            legend.title=element_text(size=12),
+            legend.text=element_text(size=11))
+    return(plot)
 }
 
 #' @title Create Segment Layer for Wall Visualization
@@ -261,7 +302,7 @@ setMethod(
         x=segments$x, xend=segments$xend, y=segments$y, yend=segments$yend)
     geom_segment(
         data=segment_df, mapping=aes(x=x, xend=xend, y=y, yend=yend),
-        linewidth=1, colour=color)
+        linewidth=0.8, colour=color, alpha=0.8)
 }
 
 #' @title Calculate Segment Coordinates

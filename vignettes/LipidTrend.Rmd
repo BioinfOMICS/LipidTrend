@@ -88,8 +88,6 @@ of this section to learn how to build a SummarizedExperiment object.
 The abundance data is a matrix containing lipid abundance values across lipids 
 and samples, where rows represent lipids and columns represent samples.
 ```{r abundance}
-rm(list = ls())
-
 # load example abundance data
 data("abundance_2D")
 
@@ -212,10 +210,10 @@ information on these helper functions, please refer to
 
 ```{r Region1D_result}
 # view even chain result (first 5 lines)
-head(getEvenChainResult(res1D), 5)
+head(even_chain_result(res1D), 5)
 
 # view odd chain result (first 5 lines)
-head(getOddChainResult(res1D), 5)
+head(odd_chain_result(res1D), 5)
 ```
 
 ### Result visualization
@@ -229,7 +227,7 @@ even-chain lipids and another for odd-chain lipids.
 
 ```{r plotRegion1D}
 # plot result
-plots <- plotRegion1D(res1D, p_cutoff=0.05)
+plots <- plotRegion1D(res1D, p_cutoff=0.05, y_scale='identity')
 
 # even chain result
 plots$even_result
@@ -289,7 +287,7 @@ length in the `chain_col` variable.
 res2D <- analyzeLipidRegion(
     lipid_se_2D, ref_group="sgCtrl", split_chain=TRUE,
     chain_col="Total.C", radius=3, own_contri=0.5, permute_time=1000,
-    abun_weight=TRUE)
+    abund_weight=TRUE)
 
 # view result summary 
 show(res2D)
@@ -303,10 +301,10 @@ information on these helper functions, please refer to
 
 ```{r Region2D_result}
 # view even chain result (first 5 lines)
-head(getEvenChainResult(res2D), 5)
+head(even_chain_result(res2D), 5)
 
 # view odd chain result (first 5 lines)
-head(getOddChainResult(res2D), 5)
+head(odd_chain_result(res2D), 5)
 ```
 
 ### Result visualization
@@ -351,15 +349,15 @@ across various lipid characteristics.
 `LipidTrend` provides 4 helper functions to enhance the viewing of the 
 `LipidTrendSE` object returned by `analyzeLipidRegion`:
 
-1. getResult – Returns the result data frame.
-2. getEvenChainResult – Returns the even-chain result data frame.
-3. getOddChainResult – Returns the odd-chain result data frame.
+1. result – Returns the result data frame.
+2. even_chain_result – Returns the even-chain result data frame.
+3. odd_chain_result – Returns the odd-chain result data frame.
 4. show – Displays a summary of the `LipidTrendSE` object.
 
 **Notes**:
 
-* If `split_chain=TRUE`, use `getEvenChainResult` and `getOddChainResult` to 
-view the results separately. Otherwise, use `getResult`.
+* If `split_chain=TRUE`, use `even_chain_result` and `odd_chain_result` to 
+view the results separately. Otherwise, use `result`.
 * To extract assay, rowData, or colData from the `LipidTrendSE` object, use 
 functions from the `r Biocpkg("SummarizedExperiment")` package.
 

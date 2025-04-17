@@ -7,13 +7,13 @@
 #'     lipid_se=lipid_se_CL, ref_group="sgCtrl", split_chain=FALSE,
 #'     chain_col=NULL, radius=3, own_contri=0.5, permute_time=100)
 #' # Get complete result
-#' results <- getResult(res_se)
+#' results <- result(res_se)
 #' @export
-setGeneric("getResult", function(object) standardGeneric("getResult"))
+setGeneric("result", function(object) standardGeneric("result"))
 
-#' @rdname getResult
-#' @exportMethod getResult
-setMethod("getResult", "LipidTrendSE", function(object) {
+#' @rdname result
+#' @exportMethod result
+setMethod("result", "LipidTrendSE", function(object) {
     object@result
 })
 
@@ -27,16 +27,16 @@ setMethod("getResult", "LipidTrendSE", function(object) {
 #'     lipid_se=sub, ref_group="sgCtrl", split_chain=TRUE,
 #'     chain_col="chain", radius=3, own_contri=0.5, permute_time=100)
 #' # Get complete result summary
-#' results <- getEvenChainResult(res_se)
+#' results <- even_chain_result(res_se)
 #' @export
 setGeneric(
-    "getEvenChainResult",
-    function(object) standardGeneric("getEvenChainResult"))
+    "even_chain_result",
+    function(object) standardGeneric("even_chain_result"))
 
-#' @rdname getEvenChainResult
-#' @aliases getEvenChainResult,LipidTrendSE-method
-#' @exportMethod getEvenChainResult
-setMethod("getEvenChainResult", "LipidTrendSE", function(object) {
+#' @rdname even_chain_result
+#' @aliases even_chain_result,LipidTrendSE-method
+#' @exportMethod even_chain_result
+setMethod("even_chain_result", "LipidTrendSE", function(object) {
     object@even_chain_result
 })
 
@@ -49,16 +49,16 @@ setMethod("getEvenChainResult", "LipidTrendSE", function(object) {
 #'     lipid_se=lipid_se_CL, ref_group="sgCtrl", split_chain=TRUE,
 #'     chain_col="chain", radius=3, own_contri=0.5, permute_time=100)
 #' # Get complete result summary
-#' results <- getOddChainResult(res_se)
+#' results <- odd_chain_result(res_se)
 #' @export
 setGeneric(
-    "getOddChainResult",
-    function(object) standardGeneric("getOddChainResult"))
+    "odd_chain_result",
+    function(object) standardGeneric("odd_chain_result"))
 
-#' @rdname getOddChainResult
-#' @aliases getOddChainResult,LipidTrendSE-method
-#' @exportMethod getOddChainResult
-setMethod("getOddChainResult", "LipidTrendSE", function(object) {
+#' @rdname odd_chain_result
+#' @aliases odd_chain_result,LipidTrendSE-method
+#' @exportMethod odd_chain_result
+setMethod("odd_chain_result", "LipidTrendSE", function(object) {
     object@odd_chain_result
 })
 
@@ -68,12 +68,12 @@ setMethod("getOddChainResult", "LipidTrendSE", function(object) {
 #' @return Logical indicating if analysis was split by chain
 #' @keywords internal
 setGeneric(
-    ".getSplitChainStatus",
-    function(object) standardGeneric(".getSplitChainStatus"))
+    ".split_chain",
+    function(object) standardGeneric(".split_chain"))
 
-#' @aliases .getSplitChainStatus,LipidTrendSE-method
+#' @aliases .split_chain,LipidTrendSE-method
 #' @keywords internal
-setMethod(".getSplitChainStatus", "LipidTrendSE", function(object) {
+setMethod(".split_chain", "LipidTrendSE", function(object) {
     object@split_chain
 })
 
@@ -88,23 +88,23 @@ setMethod("show", "LipidTrendSE", function(object) {
     cat("\nLipidTrend Results:\n")
     cat("------------------------\n")
     cat("Split chain analysis:",
-        if(.getSplitChainStatus(object)) "Yes" else "No", "\n")
+        if(.split_chain(object)) "Yes" else "No", "\n")
 
-    if (.getSplitChainStatus(object)) {
-        even_results <- getEvenChainResult(object)
+    if (.split_chain(object)) {
+        even_results <- even_chain_result(object)
         if (!is.null(even_results)) {
             cat(
                 "Even chain result: ", nrow(even_results),
                 " features\n", sep="")
         }
-        odd_results <- getOddChainResult(object)
+        odd_results <- odd_chain_result(object)
         if (!is.null(odd_results)) {
             cat(
                 "Odd chain result: ",
                 nrow(odd_results), " features\n", sep="")
         }
     } else {
-        result <- getResult(object)
+        result <- result(object)
         if (!is.null(result)) {
             cat("Result: ", nrow(result), " features\n", sep="")
         }

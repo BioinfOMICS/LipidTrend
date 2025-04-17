@@ -12,7 +12,7 @@ analyzeLipidRegion(
   radius = 3,
   own_contri = 0.5,
   test = "t.test",
-  abun_weight = TRUE,
+  abund_weight = TRUE,
   permute_time = 1e+05
 )
 }
@@ -48,10 +48,10 @@ Default is \code{3}.}
 Default is \code{0.5}. To not over-emphasize the neighbor information,
 we suggest to choose a value from 0.5 to 1.}
 
-\item{test}{string. Choose statistic test from "t.test" and "Wilcoxon".
+\item{test}{String. Choose statistic test from "t.test" and "Wilcoxon".
 Default is \code{'t.test'}.}
 
-\item{abun_weight}{Logical. Consider the average abundance as the weight in
+\item{abund_weight}{Logical. Consider the average abundance as the weight in
 the test statistic. Default is \code{TRUE}.}
 
 \item{permute_time}{Integer. Permutation times. Default is \code{100000}.}
